@@ -19,4 +19,20 @@ router.post('/register', async (req, res) => {
   }
 });
 
+router.get('/', async (req, res) => {
+  try {
+    const teams = await Team.find();
+    res.status(200).json({
+      success: true,
+      count: teams.length,
+      data: teams
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: error.message
+    });
+  }
+});
+
 module.exports = router; 
