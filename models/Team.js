@@ -13,28 +13,23 @@ const playerSchema = new mongoose.Schema({
     type: String,
     required: true,
     enum: [
-      'GK',    
+      'GK',
 
-      'CB',    
-      'RB',    
-      'LB',    
-      'RWB',   
-      'LWB',   
-      'SW',    
+      'CB',
+      'RB',
+      'LB',
 
-      'CDM',   
-      'CM',    
-      'CAM',   
-      'RM',    
-      'LM',    
-      'RW',    
-      'LW',    
+      'CDM',
+      'CM',
+      'CAM',
+      'RM',
+      'LM',
+      'RW',
+      'LW',
 
-      'CF',    
-      'ST',    
-      'SS',    
-      'RF',    
-      'LF'     
+      'CF',
+      'ST',
+      'SS',
     ]
   },
   jerseyNumber: {
