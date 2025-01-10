@@ -52,6 +52,7 @@ const teamSchema = new mongoose.Schema({
   captainName: {
     type: String,
     required: true
+    
   },
   viceCaptainName: {
     type: String,
@@ -64,4 +65,4 @@ const teamSchema = new mongoose.Schema({
   }
 });
 
-module.exports = mongoose.model('Team', teamSchema); 
+module.exports = mongoose.model('Team', teamSchema, 'teams'); 
