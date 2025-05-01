@@ -21,6 +21,9 @@ mongoose.connect(process.env.MONGODB_URI)
 const teamRoutes = require('./routes/teamRoutes');
 app.use('/api/teams', teamRoutes);
 
+const playerRoutes = require('./routes/singleplayer');
+app.use('/api/player', playerRoutes);
+
 const PORT = process.env.PORT;
 app.listen(PORT, () => {
   console.log(`Server is running on port ${PORT}`);
