@@ -1,7 +1,44 @@
 const express = require('express');
 const router = express.Router();
+const mongoose = require('mongoose');
 const Team = require('../models/Team');
 const upload = require('../middleware/upload');
+
+// Verify team name and secret key
+router.post('/verify-key', async (req, res) => {
+  try {
+    const { teamName, secretKey } = req.body;
+
+    if (!teamName || !secretKey) {
+      return res.status(400).json({
+        success: false,
+        message: 'Team name and secret key are required'
+      });
+    }
+
+    const team = await Team.findOne({ teamName });
+
+    if (!team) {
+      return res.status(404).json({
+        success: false,
+        message: 'Team not found'
+      });
+    }
+
+    const isValid = team.secretKey === secretKey;
+
+    res.json({
+      success: true,
+      isValid,
+      message: isValid ? 'Valid team credentials' : 'Invalid secret key'
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: 'Server error'
+    });
+  }
+});
 
 // Step 1: Register team with empty players array
 router.post('/register', async (req, res) => {
@@ -16,12 +53,22 @@ router.post('/register', async (req, res) => {
       });
     }
 
+    // Check if team already exists
+    const existingTeam = await Team.findOne({ teamName });
+    if (existingTeam) {
+      return res.status(400).json({
+        success: false,
+        message: 'Team with this name already exists'
+      });
+    }
+
     // Create team with empty players array
     const newTeam = new Team({
       teamName,
       batchYear,
       captainName,
       viceCaptainName,
+      secretKey: null,
       players: [] // Start with empty players array
     });
 
@@ -40,23 +87,19 @@ router.post('/register', async (req, res) => {
 });
 
 // Step 2: Update players for a team with images
-router.put('/update-players/:teamId', upload.array('playerImages', 16), async (req, res) => {
+router.put('/update-players/:teamId', async (req, res) => {
   try {
-    console.log('Request received for teamId:', req.params.teamId);
-    console.log('Request body:', req.body);
-    console.log('Uploaded files:', req.files);
-
     const { teamId } = req.params;
-    let players = req.body.players;
-    const uploadedImages = req.files;
+    const id = mongoose.Types.ObjectId.isValid(teamId)
+      ? new mongoose.Types.ObjectId(teamId)
+      : teamId;
 
-    // If players is a string, try to parse it
+    console.log('Looking for team with ID:', id);
+
     if (typeof players === 'string') {
       try {
         players = JSON.parse(players);
-        console.log('Parsed players array:', players);
       } catch (parseError) {
-        console.error('Failed to parse players JSON:', parseError);
         return res.status(400).json({
           success: false,
           message: 'Invalid players data format',
@@ -68,13 +111,7 @@ router.put('/update-players/:teamId', upload.array('playerImages', 16), async (r
       }
     }
 
-    console.log('Players array length:', players?.length);
-    console.log('First player data:', players?.[0]);
-    console.log('Number of uploaded images:', uploadedImages?.length);
-
-    // Validate if players array has exactly 16 players
     if (!Array.isArray(players) || players.length !== 16) {
-      console.log('Validation failed:', { players, length: players?.length });
       return res.status(400).json({
         success: false,
         message: 'Exactly 16 players are required',
@@ -85,55 +122,48 @@ router.put('/update-players/:teamId', upload.array('playerImages', 16), async (r
       });
     }
 
-    // Process uploaded images and update player data
-    const processedPlayers = players.map((player, index) => {
-      console.log(`Processing player ${index + 1}:`, player);
-      // If there's an uploaded image for this player, use it
-      if (uploadedImages && uploadedImages[index]) {
-        console.log(`Found image for player ${index + 1}:`, uploadedImages[index]);
-        return {
-          ...player,
-          image: uploadedImages[index].path
-        };
-      }
-      // If no new image, keep the existing image or set to null
-      return {
-        ...player,
-        image: player.image || null
-      };
-    });
 
-    console.log('Processed players:', processedPlayers);
-
-    // Find team and update players
-    console.log('Updating team with teamId:', teamId);
+    // Find and update the team in one operation
     const updatedTeam = await Team.findByIdAndUpdate(
-      teamId,
-      { players: processedPlayers },
+      id,
+      { players: req.body.players },
       { new: true, runValidators: true }
     );
 
-    console.log('Team update result:', updatedTeam);
-
     if (!updatedTeam) {
-      console.log('Team not found for teamId:', teamId);
       return res.status(404).json({
         success: false,
-        message: 'Team not found',
+        message: 'Team not found or update failed',
         debug: {
-          teamId,
-          processedPlayers
+          teamId: teamId,
+          convertedId: id
         }
       });
     }
 
-    res.status(200).json({
-      success: true,
-      message: 'Players updated successfully',
-      data: updatedTeam
-    });
+    console.log('Updated team:', updatedTeam);
+
+
+    // Generate secret key if it doesn't exist
+    if (!updatedTeam.secretKey) {
+      const secretKey = Math.random().toString(36).substring(2, 10); // 8 characters
+      updatedTeam.secretKey = secretKey;
+      await updatedTeam.save();
+
+      res.status(200).json({
+        success: true,
+        message: 'Players updated successfully',
+        data: updatedTeam,
+        secretKey: secretKey
+      });
+    } else {
+      res.status(200).json({
+        success: true,
+        message: 'Players updated successfully',
+        data: updatedTeam
+      });
+    }
   } catch (error) {
-    console.error('Error in update-players:', error);
     res.status(400).json({
       success: false,
       message: error.message,
@@ -163,4 +193,6 @@ router.get('/', async (req, res) => {
   }
 });
 
-module.exports = router; 
+module.exports = router;
+
+

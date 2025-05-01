@@ -58,6 +58,10 @@ const teamSchema = new mongoose.Schema({
     type: String,
     required: true
   },
+  secretKey: {
+    type: String,
+    required: false
+  },
   players: [playerSchema],
   createdAt: {
     type: Date,
