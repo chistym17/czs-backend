@@ -40,19 +40,19 @@ const playerSchema = new mongoose.Schema({
 });
 
 const teamSchema = new mongoose.Schema({
-  name: {
+  teamName: {
     type: String,
     required: true,
     unique: true
   },
-  year: {
+  batchYear: {
     type: Number,
     required: true
   },
   captainName: {
     type: String,
     required: true
-    
+
   },
   viceCaptainName: {
     type: String,
