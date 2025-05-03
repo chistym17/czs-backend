@@ -26,6 +26,8 @@ const teamRoutes = require("./routes/teamRoutes");
 app.use("/api/teams", teamRoutes);
 const fixtureRoutes = require("./routes/fixtureRoutes");
 app.use("/api/fixtures", fixtureRoutes);
+const resultRoutes = require("./routes/resultRoutes");
+app.use("/api/results", resultRoutes);
 
 const PORT = process.env.PORT;
 app.listen(PORT, () => {
