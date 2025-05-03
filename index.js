@@ -1,6 +1,7 @@
 const express = require("express");
 const mongoose = require("mongoose");
 const cors = require("cors");
+
 require("dotenv").config();
 
 const app = express();
@@ -23,9 +24,8 @@ mongoose
 
 const teamRoutes = require("./routes/teamRoutes");
 app.use("/api/teams", teamRoutes);
-
-const adminRoutes = require("./routes/adminRoutes"); // Add admin routes
-app.use("/api/admin", adminRoutes);
+const fixtureRoutes = require("./routes/fixtureRoutes");
+app.use("/api/fixtures", fixtureRoutes);
 
 const PORT = process.env.PORT;
 app.listen(PORT, () => {
