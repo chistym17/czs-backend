@@ -2,7 +2,9 @@ const express = require('express');
 const router = express.Router();
 const mongoose = require('mongoose');
 const Team = require('../models/Team');
+const TeamLogo = require('../models/TeamLogo');
 const upload = require('../middleware/upload');
+const cloudinary = require('../config/cloudinary');
 
 // Verify team name and secret key
 router.post('/verify-key', async (req, res) => {
@@ -42,6 +44,8 @@ router.post('/verify-key', async (req, res) => {
 
 // Step 1: Register team with empty players array
 router.post('/register', async (req, res) => {
+  console.log('req.body', req.body);
+
   try {
     const { teamName, batchYear, captainName, viceCaptainName } = req.body;
 
@@ -88,8 +92,12 @@ router.post('/register', async (req, res) => {
 
 // Step 2: Update players for a team with images
 router.put('/update-players/:teamId', async (req, res) => {
+
+  console.log('req.body', req.body);
+
   try {
     const { teamId } = req.params;
+    const { players } = req.body;
     const id = mongoose.Types.ObjectId.isValid(teamId)
       ? new mongoose.Types.ObjectId(teamId)
       : teamId;
@@ -111,16 +119,16 @@ router.put('/update-players/:teamId', async (req, res) => {
       }
     }
 
-    if (!Array.isArray(players) || players.length !== 16) {
-      return res.status(400).json({
-        success: false,
-        message: 'Exactly 16 players are required',
-        debug: {
-          playersReceived: players,
-          playersCount: players?.length
-        }
-      });
-    }
+    // if (!Array.isArray(players) || players.length !== 16) {
+    //   return res.status(400).json({
+    //     success: false,
+    //     message: 'Exactly 16 players are required',
+    //     debug: {
+    //       playersReceived: players,
+    //       playersCount: players?.length
+    //     }
+    //   });
+    // }
 
 
     // Find and update the team in one operation
@@ -140,8 +148,6 @@ router.put('/update-players/:teamId', async (req, res) => {
         }
       });
     }
-
-    console.log('Updated team:', updatedTeam);
 
 
     // Generate secret key if it doesn't exist
@@ -193,6 +199,281 @@ router.get('/', async (req, res) => {
   }
 });
 
-module.exports = router;
+// Get team data by team name
+router.get('/by-name/:teamName', async (req, res) => {
+  try {
+    const { teamName } = req.params;
 
+    if (!teamName) {
+      return res.status(400).json({
+        success: false,
+        message: 'Team name is required'
+      });
+    }
+
+    const team = await Team.findOne({ teamName });
+
+    if (!team) {
+      return res.status(404).json({
+        success: false,
+        message: 'Team not found'
+      });
+    }
+
+    // Create a copy of the team data without the secret key
+    const teamData = team.toObject();
+    delete teamData.secretKey;
+
+    res.status(200).json({
+      success: true,
+      data: teamData
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: error.message
+    });
+  }
+});
+
+// Update team information
+router.put('/:teamId', async (req, res) => {
+  try {
+    const { teamId } = req.params;
+    const { teamName, batchYear, captainName, viceCaptainName } = req.body;
+
+    // Validate required fields
+    if (!teamName || !batchYear || !captainName || !viceCaptainName) {
+      return res.status(400).json({
+        success: false,
+        message: 'All fields are required'
+      });
+    }
+
+    // Check if team exists
+    const team = await Team.findById(teamId);
+    if (!team) {
+      return res.status(404).json({
+        success: false,
+        message: 'Team not found'
+      });
+    }
+
+    // Check if new team name is already taken by another team
+    if (teamName !== team.teamName) {
+      const existingTeam = await Team.findOne({ teamName });
+      if (existingTeam) {
+        return res.status(400).json({
+          success: false,
+          message: 'Team name is already taken'
+        });
+      }
+    }
+
+    // Update team
+    const updatedTeam = await Team.findByIdAndUpdate(
+      teamId,
+      {
+        teamName,
+        batchYear,
+        captainName,
+        viceCaptainName
+      },
+      { new: true, runValidators: true }
+    );
+
+    res.status(200).json({
+      success: true,
+      message: 'Team updated successfully',
+      data: updatedTeam
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: error.message
+    });
+  }
+});
+
+// Update player information
+router.put('/:teamId/players/:playerId', async (req, res) => {
+  try {
+    const { teamId, playerId } = req.params;
+    const { name, position, jerseyNumber, image } = req.body;
+
+    // Validate required fields
+    if (!name || !position || !jerseyNumber) {
+      return res.status(400).json({
+        success: false,
+        message: 'Name, position, and jersey number are required'
+      });
+    }
+
+    // Check if team exists
+    const team = await Team.findById(teamId);
+    if (!team) {
+      return res.status(404).json({
+        success: false,
+        message: 'Team not found'
+      });
+    }
+
+    // Find player in team
+    const playerIndex = team.players.findIndex(p => p._id.toString() === playerId);
+    if (playerIndex === -1) {
+      return res.status(404).json({
+        success: false,
+        message: 'Player not found in team'
+      });
+    }
+
+    // Update player
+    team.players[playerIndex] = {
+      ...team.players[playerIndex],
+      name,
+      position,
+      jerseyNumber,
+      image: image || team.players[playerIndex].image
+    };
+
+    await team.save();
+
+    res.status(200).json({
+      success: true,
+      message: 'Player updated successfully',
+      data: team.players[playerIndex]
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: error.message
+    });
+  }
+});
+
+// Upload player image
+router.post('/upload-player-image', upload.single('image'), async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({
+        success: false,
+        message: 'No image file provided'
+      });
+    }
+
+    const { teamId, playerId } = req.body;
+
+    // Check if team exists
+    const team = await Team.findById(teamId);
+    if (!team) {
+      return res.status(404).json({
+        success: false,
+        message: 'Team not found'
+      });
+    }
+
+    // Find player in team
+    const playerIndex = team.players.findIndex(p => p._id.toString() === playerId);
+    if (playerIndex === -1) {
+      return res.status(404).json({
+        success: false,
+        message: 'Player not found in team'
+      });
+    }
+
+    // Update player image
+    team.players[playerIndex].image = req.file.path;
+    await team.save();
+
+    res.status(200).json({
+      success: true,
+      message: 'Player image uploaded successfully',
+      imageUrl: req.file.path
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: error.message
+    });
+  }
+});
+
+// Upload team logo
+router.post('/upload-team-logo', upload.single('logo'), async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({
+        success: false,
+        message: 'No logo file provided'
+      });
+    }
+
+    const { teamId } = req.body;
+
+    // Check if team exists
+    const team = await Team.findById(teamId);
+    if (!team) {
+      return res.status(404).json({
+        success: false,
+        message: 'Team not found'
+      });
+    }
+
+    // Upload to Cloudinary
+    const result = await cloudinary.uploader.upload(req.file.path, {
+      folder: 'team-logos',
+    });
+
+    // Save to TeamLogo collection
+    const teamLogo = new TeamLogo({
+      teamId,
+      logoUrl: result.secure_url
+    });
+    await teamLogo.save();
+
+    // Update team with logo URL
+    team.logo = result.secure_url;
+    await team.save();
+
+    res.status(200).json({
+      success: true,
+      message: 'Team logo uploaded successfully',
+      logoUrl: result.secure_url
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: error.message
+    });
+  }
+});
+
+router.get('/:teamId', async (req, res) => {
+  try {
+    const { teamId } = req.params;
+    const team = await Team.findById(teamId);
+    res.status(200).json({ success: true, data: team });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: error.message
+    });
+  }
+});
+
+
+router.get('/team-logo/:teamId', async (req, res) => {
+  try {
+    const { teamId } = req.params;
+    const teamLogo = await TeamLogo.findOne({ teamId });
+    res.status(200).json({ success: true, data: teamLogo });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: error.message
+    });
+  }
+});
+
+module.exports = router;
 
