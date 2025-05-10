@@ -2,10 +2,8 @@ const express = require('express');
 const router = express.Router();
 const mongoose = require('mongoose');
 const Team = require('../models/Team');
-const TeamLogo = require('../models/TeamLogo');
 const upload = require('../middleware/upload');
 const cloudinary = require('../config/cloudinary');
-const PlayerImage = require('../models/PlayerImage');
 
 // Verify team name and secret key
 router.post('/verify-key', async (req, res) => {
@@ -72,6 +70,7 @@ router.post('/register', async (req, res) => {
       batchYear,
       captainName,
       viceCaptainName,
+      teamLogo: null,
       secretKey: null,
       players: [] // Start with empty players array
     });
@@ -271,6 +270,73 @@ router.put('/:teamId', async (req, res) => {
   }
 });
 
+// Upload team logo
+router.post('/upload-team-logo', upload.single('logo'), async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({
+        success: false,
+        message: 'No logo file provided'
+      });
+    }
+
+    const { teamId } = req.body;
+
+    const team = await Team.findById(teamId);
+    if (!team) {
+      return res.status(404).json({
+        success: false,
+        message: 'Team not found'
+      });
+    }
+
+    const result = await cloudinary.uploader.upload(req.file.path, {
+      folder: 'team-logos',
+    });
+
+    team.teamLogo = result.secure_url;
+    await team.save();
+
+    res.status(200).json({
+      success: true,
+      message: 'Team logo uploaded successfully',
+      logoUrl: result.secure_url
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: error.message
+    });
+  }
+});
+
+router.get('/:teamId', async (req, res) => {
+  try {
+    const { teamId } = req.params;
+    const team = await Team.findById(teamId);
+    res.status(200).json({ success: true, data: team });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: error.message
+    });
+  }
+});
+
+
+router.get('/team-logo/:teamId', async (req, res) => {
+  try {
+    const { teamId } = req.params;
+    const team = await Team.findById(teamId);
+    res.status(200).json({ success: true, data: team.teamLogo });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: error.message
+    });
+  }
+});
+
 // Update player information
 router.put('/:teamId/players/:playerId', async (req, res) => {
   try {
@@ -339,7 +405,6 @@ router.post('/upload-player-image', upload.single('image'), async (req, res) => 
 
     const { teamId, playerId } = req.body;
 
-    // Check if team exists
     const team = await Team.findById(teamId);
     if (!team) {
       return res.status(404).json({
@@ -348,7 +413,6 @@ router.post('/upload-player-image', upload.single('image'), async (req, res) => 
       });
     }
 
-    // Find player in team
     const playerIndex = team.players.findIndex(p => p._id.toString() === playerId);
     if (playerIndex === -1) {
       return res.status(404).json({
@@ -357,18 +421,13 @@ router.post('/upload-player-image', upload.single('image'), async (req, res) => 
       });
     }
 
-    // Upload to Cloudinary
     const result = await cloudinary.uploader.upload(req.file.path, {
       folder: 'player-images',
     });
 
-    // Save to PlayerImage collection
-    const playerImage = new PlayerImage({
-      playerId,
-      teamId,
-      imageUrl: result.secure_url
-    });
-    await playerImage.save();
+    team.players[playerIndex].image = result.secure_url;
+
+    await team.save();
 
     res.status(200).json({
       success: true,
@@ -387,7 +446,7 @@ router.post('/upload-player-image', upload.single('image'), async (req, res) => 
 router.get('/player-image/:playerId', async (req, res) => {
   try {
     const { playerId } = req.params;
-    const playerImage = await PlayerImage.findOne({ playerId });
+    const playerImage = await Team.findOne({ players: { $elemMatch: { _id: playerId } } });
     res.status(200).json({ success: true, data: playerImage });
   } catch (error) {
     res.status(500).json({
@@ -397,82 +456,7 @@ router.get('/player-image/:playerId', async (req, res) => {
   }
 });
 
-// Upload team logo
-router.post('/upload-team-logo', upload.single('logo'), async (req, res) => {
-  try {
-    if (!req.file) {
-      return res.status(400).json({
-        success: false,
-        message: 'No logo file provided'
-      });
-    }
 
-    const { teamId } = req.body;
-
-    // Check if team exists
-    const team = await Team.findById(teamId);
-    if (!team) {
-      return res.status(404).json({
-        success: false,
-        message: 'Team not found'
-      });
-    }
-
-    // Upload to Cloudinary
-    const result = await cloudinary.uploader.upload(req.file.path, {
-      folder: 'team-logos',
-    });
-
-    // Save to TeamLogo collection
-    const teamLogo = new TeamLogo({
-      teamId,
-      logoUrl: result.secure_url
-    });
-    await teamLogo.save();
-
-    // Update team with logo URL
-    team.logo = result.secure_url;
-    await team.save();
-
-    res.status(200).json({
-      success: true,
-      message: 'Team logo uploaded successfully',
-      logoUrl: result.secure_url
-    });
-  } catch (error) {
-    res.status(500).json({
-      success: false,
-      message: error.message
-    });
-  }
-});
-
-router.get('/:teamId', async (req, res) => {
-  try {
-    const { teamId } = req.params;
-    const team = await Team.findById(teamId);
-    res.status(200).json({ success: true, data: team });
-  } catch (error) {
-    res.status(500).json({
-      success: false,
-      message: error.message
-    });
-  }
-});
-
-
-router.get('/team-logo/:teamId', async (req, res) => {
-  try {
-    const { teamId } = req.params;
-    const teamLogo = await TeamLogo.findOne({ teamId });
-    res.status(200).json({ success: true, data: teamLogo });
-  } catch (error) {
-    res.status(500).json({
-      success: false,
-      message: error.message
-    });
-  }
-});
 
 module.exports = router;
 
