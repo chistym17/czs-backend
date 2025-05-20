@@ -174,6 +174,21 @@ router.get('/', async (req, res) => {
   }
 });
 
+
+router.get('/:teamId  ', async (req, res) => {
+  try {
+    const { teamId } = req.params;
+    const team = await Team.findById(teamId);
+    res.status(200).json({ success: true, data: team });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: error.message
+    });
+  }
+});
+
+
 // Get team data by team name
 router.get('/by-name/:teamName', async (req, res) => {
   try {
