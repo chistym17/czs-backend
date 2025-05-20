@@ -37,7 +37,12 @@ const playerSchema = new mongoose.Schema({
     type: Number,
     required: false
   },
-
+  goals: {
+    type: Number,
+    required: false,
+    default: 0
+  }
+ 
 });
 
 const teamSchema = new mongoose.Schema({
