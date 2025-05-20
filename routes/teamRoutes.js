@@ -175,6 +175,7 @@ router.get('/', async (req, res) => {
 });
 
 
+
 router.get('/:teamId  ', async (req, res) => {
   try {
     const { teamId } = req.params;
