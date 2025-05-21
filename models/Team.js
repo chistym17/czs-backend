@@ -72,6 +72,11 @@ const teamSchema = new mongoose.Schema({
     type: String,
     required: false
   },
+  isVerified: {
+    type: Boolean,
+    required: false,
+    default: false
+  },
   players: [playerSchema],
   createdAt: {
     type: Date,

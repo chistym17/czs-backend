@@ -72,6 +72,7 @@ router.post('/register', async (req, res) => {
       viceCaptainName,
       teamLogo: null,
       secretKey: null,
+      isVerified: false,
       players: [] // Start with empty players array
     });
 
@@ -160,7 +161,14 @@ router.put('/update-players/:teamId', async (req, res) => {
 // Get all teams
 router.get('/', async (req, res) => {
   try {
-    const teams = await Team.find();
+    const { isVerified } = req.query;
+    let query = {};
+    
+    if (isVerified !== undefined) {
+      query.isVerified = isVerified === 'true';
+    }
+
+    const teams = await Team.find(query);
     res.status(200).json({
       success: true,
       count: teams.length,
