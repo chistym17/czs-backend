@@ -1,10 +1,16 @@
 const express = require("express");
 const mongoose = require("mongoose");
 const cors = require("cors");
-
+const cloudinary = require("cloudinary").v2;
 require("dotenv").config();
 
 const app = express();
+
+cloudinary.config({
+  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+  api_key: process.env.CLOUDINARY_API_KEY,
+  api_secret: process.env.CLOUDINARY_API_SECRET,
+});
 
 app.use(
   cors({
@@ -22,14 +28,16 @@ mongoose
   .then(() => console.log("Connected to MongoDB"))
   .catch((err) => console.error("MongoDB connection error:", err));
 
+// Routes
 const teamRoutes = require("./routes/teamRoutes");
-app.use("/api/teams", teamRoutes);
-const fixtureRoutes = require("./routes/fixtureRoutes");
-app.use("/api/fixtures", fixtureRoutes);
-const resultRoutes = require("./routes/resultRoutes");
-app.use("/api/results", resultRoutes);
+const playerRoutes = require("./routes/singleplayer");
+const healthRoutes = require("./routes/healthRoutes");
 
-const PORT = process.env.PORT;
+app.use("/api/teams", teamRoutes);
+app.use("/api/player", playerRoutes);
+app.use("/api/health", healthRoutes);
+
+const PORT = process.env.PORT || 3001;
 app.listen(PORT, () => {
   console.log(`Server is running on port ${PORT}`);
 });

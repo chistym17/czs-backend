@@ -7,7 +7,8 @@ const playerSchema = new mongoose.Schema({
   },
   image: {
     type: String,
-    required: false
+    required: false,
+    default: null
   },
   position: {
     type: String,
@@ -34,29 +35,47 @@ const playerSchema = new mongoose.Schema({
   },
   jerseyNumber: {
     type: Number,
-    required: true
+    required: false
   },
-
+  goals: {
+    type: Number,
+    required: false,
+    default: 0
+  }
+ 
 });
 
 const teamSchema = new mongoose.Schema({
-  name: {
+  teamName: {
     type: String,
     required: true,
     unique: true
   },
-  year: {
+  batchYear: {
     type: Number,
     required: true
   },
   captainName: {
     type: String,
     required: true
-    
+
   },
   viceCaptainName: {
     type: String,
     required: true
+  },
+  teamLogo: {
+    type: String,
+    required: false
+  },
+  secretKey: {
+    type: String,
+    required: false
+  },
+  isVerified: {
+    type: Boolean,
+    required: false,
+    default: false
   },
   players: [playerSchema],
   createdAt: {
