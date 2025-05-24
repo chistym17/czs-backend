@@ -1,27 +1,27 @@
-const mongoose = require("mongoose");
+const mongoose = require('mongoose');
 
 const playerSchema = new mongoose.Schema({
   name: {
     type: String,
     required: true,
-    trim: true,
+    trim: true
   },
   image: {
     type: String,
-    required: false,
+    required: false
   },
   batch: {
     type: String,
-    required: true,
+    required: true
   },
   position: {
     type: String,
-    required: true,
+    required: true
   },
   school: {
     type: String,
-    required: true,
-  },
+    required: true
+  }
 });
 
-module.exports = mongoose.model("Player", playerSchema);
+module.exports = mongoose.model('Player', playerSchema);
