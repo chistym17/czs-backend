@@ -1,19 +1,19 @@
-const express = require("express");
+const express = require('express');
 const router = express.Router();
-const mongoose = require("mongoose");
-const Team = require("../models/Team");
-const upload = require("../middleware/upload");
-const cloudinary = require("../config/cloudinary");
+const mongoose = require('mongoose');
+const Team = require('../models/Team');
+const upload = require('../middleware/upload');
+const cloudinary = require('../config/cloudinary');
 
 // Verify team name and secret key
-router.post("/verify-key", async (req, res) => {
+router.post('/verify-key', async (req, res) => {
   try {
     const { teamName, secretKey } = req.body;
 
     if (!teamName || !secretKey) {
       return res.status(400).json({
         success: false,
-        message: "Team name and secret key are required",
+        message: 'Team name and secret key are required'
       });
     }
 
@@ -22,7 +22,7 @@ router.post("/verify-key", async (req, res) => {
     if (!team) {
       return res.status(404).json({
         success: false,
-        message: "Team not found",
+        message: 'Team not found'
       });
     }
 
@@ -31,18 +31,19 @@ router.post("/verify-key", async (req, res) => {
     res.json({
       success: true,
       isValid,
-      message: isValid ? "Valid team credentials" : "Invalid secret key",
+      message: isValid ? 'Valid team credentials' : 'Invalid secret key'
     });
   } catch (error) {
     res.status(500).json({
       success: false,
-      message: "Server error",
+      message: 'Server error'
     });
   }
 });
 
 // Step 1: Register team with empty players array
-router.post("/register", async (req, res) => {
+router.post('/register', async (req, res) => {
+
   try {
     const { teamName, batchYear, captainName, viceCaptainName } = req.body;
 
@@ -50,7 +51,7 @@ router.post("/register", async (req, res) => {
     if (!teamName || !batchYear || !captainName || !viceCaptainName) {
       return res.status(400).json({
         success: false,
-        message: "Team name and year are required",
+        message: 'Team name and year are required'
       });
     }
 
@@ -59,7 +60,7 @@ router.post("/register", async (req, res) => {
     if (existingTeam) {
       return res.status(400).json({
         success: false,
-        message: "Team with this name already exists",
+        message: 'Team with this name already exists'
       });
     }
 
@@ -72,25 +73,25 @@ router.post("/register", async (req, res) => {
       teamLogo: null,
       secretKey: null,
       isVerified: false,
-      players: [], // Start with empty players array
+      players: [] // Start with empty players array
     });
 
     await newTeam.save();
     res.status(201).json({
       success: true,
-      message: "Team registered successfully",
-      data: newTeam,
+      message: 'Team registered successfully',
+      data: newTeam
     });
   } catch (error) {
     res.status(400).json({
       success: false,
-      message: error.message,
+      message: error.message
     });
   }
 });
 
 // Step 2: Update players for a team with images
-router.put("/update-players/:teamId", async (req, res) => {
+router.put('/update-players/:teamId', async (req, res) => {
   try {
     const { teamId } = req.params;
     let { players } = req.body;
@@ -99,18 +100,18 @@ router.put("/update-players/:teamId", async (req, res) => {
     if (!mongoose.Types.ObjectId.isValid(teamId)) {
       return res.status(400).json({
         success: false,
-        message: "Invalid team ID format",
+        message: 'Invalid team ID format'
       });
     }
 
     // Parse players if it's a string
-    if (typeof players === "string") {
+    if (typeof players === 'string') {
       try {
         players = JSON.parse(players);
       } catch (parseError) {
         return res.status(400).json({
           success: false,
-          message: "Invalid players data format",
+          message: 'Invalid players data format'
         });
       }
     }
@@ -120,7 +121,7 @@ router.put("/update-players/:teamId", async (req, res) => {
     if (!existingTeam) {
       return res.status(404).json({
         success: false,
-        message: "Team not found",
+        message: 'Team not found'
       });
     }
 
@@ -136,51 +137,54 @@ router.put("/update-players/:teamId", async (req, res) => {
 
       return res.status(200).json({
         success: true,
-        message: "Players updated successfully",
+        message: 'Players updated successfully',
         data: existingTeam,
-        secretKey: secretKey,
+        secretKey: secretKey
       });
     }
 
     return res.status(200).json({
       success: true,
-      message: "Players updated successfully",
-      data: existingTeam,
+      message: 'Players updated successfully',
+      data: existingTeam
     });
+
   } catch (error) {
-    console.error("Error updating players:", error);
+    console.error('Error updating players:', error);
     res.status(400).json({
       success: false,
-      message: error.message,
+      message: error.message
     });
   }
 });
 
 // Get all teams
-router.get("/", async (req, res) => {
+router.get('/', async (req, res) => {
   try {
     const { isVerified } = req.query;
     let query = {};
-
+    
     if (isVerified !== undefined) {
-      query.isVerified = isVerified === "true";
+      query.isVerified = isVerified === 'true';
     }
 
     const teams = await Team.find(query);
     res.status(200).json({
       success: true,
       count: teams.length,
-      data: teams,
+      data: teams
     });
   } catch (error) {
     res.status(500).json({
       success: false,
-      message: error.message,
+      message: error.message
     });
   }
 });
 
-router.get("/:teamId  ", async (req, res) => {
+
+
+router.get('/:teamId  ', async (req, res) => {
   try {
     const { teamId } = req.params;
     const team = await Team.findById(teamId);
@@ -188,20 +192,21 @@ router.get("/:teamId  ", async (req, res) => {
   } catch (error) {
     res.status(500).json({
       success: false,
-      message: error.message,
+      message: error.message
     });
   }
 });
 
+
 // Get team data by team name
-router.get("/by-name/:teamName", async (req, res) => {
+router.get('/by-name/:teamName', async (req, res) => {
   try {
     const { teamName } = req.params;
 
     if (!teamName) {
       return res.status(400).json({
         success: false,
-        message: "Team name is required",
+        message: 'Team name is required'
       });
     }
 
@@ -210,7 +215,7 @@ router.get("/by-name/:teamName", async (req, res) => {
     if (!team) {
       return res.status(404).json({
         success: false,
-        message: "Team not found",
+        message: 'Team not found'
       });
     }
 
@@ -220,18 +225,18 @@ router.get("/by-name/:teamName", async (req, res) => {
 
     res.status(200).json({
       success: true,
-      data: teamData,
+      data: teamData
     });
   } catch (error) {
     res.status(500).json({
       success: false,
-      message: error.message,
+      message: error.message
     });
   }
 });
 
 // Update team information
-router.put("/:teamId", async (req, res) => {
+router.put('/:teamId', async (req, res) => {
   try {
     const { teamId } = req.params;
     const { teamName, batchYear, captainName, viceCaptainName } = req.body;
@@ -240,7 +245,7 @@ router.put("/:teamId", async (req, res) => {
     if (!teamName || !batchYear || !captainName || !viceCaptainName) {
       return res.status(400).json({
         success: false,
-        message: "All fields are required",
+        message: 'All fields are required'
       });
     }
 
@@ -249,7 +254,7 @@ router.put("/:teamId", async (req, res) => {
     if (!team) {
       return res.status(404).json({
         success: false,
-        message: "Team not found",
+        message: 'Team not found'
       });
     }
 
@@ -259,7 +264,7 @@ router.put("/:teamId", async (req, res) => {
       if (existingTeam) {
         return res.status(400).json({
           success: false,
-          message: "Team name is already taken",
+          message: 'Team name is already taken'
         });
       }
     }
@@ -271,31 +276,31 @@ router.put("/:teamId", async (req, res) => {
         teamName,
         batchYear,
         captainName,
-        viceCaptainName,
+        viceCaptainName
       },
       { new: true, runValidators: true }
     );
 
     res.status(200).json({
       success: true,
-      message: "Team updated successfully",
-      data: updatedTeam,
+      message: 'Team updated successfully',
+      data: updatedTeam
     });
   } catch (error) {
     res.status(500).json({
       success: false,
-      message: error.message,
+      message: error.message
     });
   }
 });
 
 // Upload team logo
-router.post("/upload-team-logo", upload.single("logo"), async (req, res) => {
+router.post('/upload-team-logo', upload.single('logo'), async (req, res) => {
   try {
     if (!req.file) {
       return res.status(400).json({
         success: false,
-        message: "No logo file provided",
+        message: 'No logo file provided'
       });
     }
 
@@ -305,12 +310,12 @@ router.post("/upload-team-logo", upload.single("logo"), async (req, res) => {
     if (!team) {
       return res.status(404).json({
         success: false,
-        message: "Team not found",
+        message: 'Team not found'
       });
     }
 
     const result = await cloudinary.uploader.upload(req.file.path, {
-      folder: "team-logos",
+      folder: 'team-logos',
     });
 
     team.teamLogo = result.secure_url;
@@ -318,18 +323,18 @@ router.post("/upload-team-logo", upload.single("logo"), async (req, res) => {
 
     res.status(200).json({
       success: true,
-      message: "Team logo uploaded successfully",
-      logoUrl: result.secure_url,
+      message: 'Team logo uploaded successfully',
+      logoUrl: result.secure_url
     });
   } catch (error) {
     res.status(500).json({
       success: false,
-      message: error.message,
+      message: error.message
     });
   }
 });
 
-router.get("/:teamId", async (req, res) => {
+router.get('/:teamId', async (req, res) => {
   try {
     const { teamId } = req.params;
     const team = await Team.findById(teamId);
@@ -337,12 +342,13 @@ router.get("/:teamId", async (req, res) => {
   } catch (error) {
     res.status(500).json({
       success: false,
-      message: error.message,
+      message: error.message
     });
   }
 });
 
-router.get("/team-logo/:teamId", async (req, res) => {
+
+router.get('/team-logo/:teamId', async (req, res) => {
   try {
     const { teamId } = req.params;
     const team = await Team.findById(teamId);
@@ -350,13 +356,13 @@ router.get("/team-logo/:teamId", async (req, res) => {
   } catch (error) {
     res.status(500).json({
       success: false,
-      message: error.message,
+      message: error.message
     });
   }
 });
 
 // Update player information
-router.put("/:teamId/players/:playerId", async (req, res) => {
+router.put('/:teamId/players/:playerId', async (req, res) => {
   try {
     const { teamId, playerId } = req.params;
     const { name, position, jerseyNumber, image } = req.body;
@@ -365,7 +371,7 @@ router.put("/:teamId/players/:playerId", async (req, res) => {
     if (!name || !position || !jerseyNumber) {
       return res.status(400).json({
         success: false,
-        message: "Name, position, and jersey number are required",
+        message: 'Name, position, and jersey number are required'
       });
     }
 
@@ -374,18 +380,16 @@ router.put("/:teamId/players/:playerId", async (req, res) => {
     if (!team) {
       return res.status(404).json({
         success: false,
-        message: "Team not found",
+        message: 'Team not found'
       });
     }
 
     // Find player in team
-    const playerIndex = team.players.findIndex(
-      (p) => p._id.toString() === playerId
-    );
+    const playerIndex = team.players.findIndex(p => p._id.toString() === playerId);
     if (playerIndex === -1) {
       return res.status(404).json({
         success: false,
-        message: "Player not found in team",
+        message: 'Player not found in team'
       });
     }
 
@@ -395,93 +399,88 @@ router.put("/:teamId/players/:playerId", async (req, res) => {
       name,
       position,
       jerseyNumber,
-      image: image || team.players[playerIndex].image,
+      image: image || team.players[playerIndex].image
     };
 
     await team.save();
 
     res.status(200).json({
       success: true,
-      message: "Player updated successfully",
-      data: team.players[playerIndex],
+      message: 'Player updated successfully',
+      data: team.players[playerIndex]
     });
   } catch (error) {
     res.status(500).json({
       success: false,
-      message: error.message,
+      message: error.message
     });
   }
 });
 
 // Upload player image
-router.post(
-  "/upload-player-image",
-  upload.single("image"),
-  async (req, res) => {
-    try {
-      if (!req.file) {
-        return res.status(400).json({
-          success: false,
-          message: "No image file provided",
-        });
-      }
-
-      const { teamId, playerId } = req.body;
-
-      const team = await Team.findById(teamId);
-      if (!team) {
-        return res.status(404).json({
-          success: false,
-          message: "Team not found",
-        });
-      }
-
-      const playerIndex = team.players.findIndex(
-        (p) => p._id.toString() === playerId
-      );
-      if (playerIndex === -1) {
-        return res.status(404).json({
-          success: false,
-          message: "Player not found in team",
-        });
-      }
-
-      const result = await cloudinary.uploader.upload(req.file.path, {
-        folder: "player-images",
-      });
-
-      team.players[playerIndex].image = result.secure_url;
-
-      await team.save();
-
-      res.status(200).json({
-        success: true,
-        message: "Player image uploaded successfully",
-        imageUrl: result.secure_url,
-      });
-    } catch (error) {
-      res.status(500).json({
+router.post('/upload-player-image', upload.single('image'), async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({
         success: false,
-        message: error.message,
+        message: 'No image file provided'
       });
     }
-  }
-);
 
-// Get player image
-router.get("/player-image/:playerId", async (req, res) => {
-  try {
-    const { playerId } = req.params;
-    const playerImage = await Team.findOne({
-      players: { $elemMatch: { _id: playerId } },
+    const { teamId, playerId } = req.body;
+
+    const team = await Team.findById(teamId);
+    if (!team) {
+      return res.status(404).json({
+        success: false,
+        message: 'Team not found'
+      });
+    }
+
+    const playerIndex = team.players.findIndex(p => p._id.toString() === playerId);
+    if (playerIndex === -1) {
+      return res.status(404).json({
+        success: false,
+        message: 'Player not found in team'
+      });
+    }
+
+    const result = await cloudinary.uploader.upload(req.file.path, {
+      folder: 'player-images',
     });
-    res.status(200).json({ success: true, data: playerImage });
+
+    team.players[playerIndex].image = result.secure_url;
+
+    await team.save();
+
+    res.status(200).json({
+      success: true,
+      message: 'Player image uploaded successfully',
+      imageUrl: result.secure_url
+    });
   } catch (error) {
     res.status(500).json({
       success: false,
-      message: error.message,
+      message: error.message
     });
   }
 });
 
+// Get player image
+router.get('/player-image/:playerId', async (req, res) => {
+  try {
+    const { playerId } = req.params;
+    const playerImage = await Team.findOne({ players: { $elemMatch: { _id: playerId } } });
+    res.status(200).json({ success: true, data: playerImage });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: error.message
+    });
+  }
+});
+
+
+
 module.exports = router;
+

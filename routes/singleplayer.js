@@ -1,17 +1,17 @@
-const express = require('express');
+const express = require("express");
 const router = express.Router();
-const upload = require('../middleware/upload');
-const Player = require('../models/SinglePlayer');
-const cloudinary = require('../config/cloudinary');
+const upload = require("../middleware/upload");
+const Player = require("../models/SinglePlayer");
+const cloudinary = require("../config/cloudinary");
 
-router.post('/register', upload.single('image'), async (req, res) => {
+router.post("/register", upload.single("image"), async (req, res) => {
   try {
-    const { name, batch, position } = req.body;
-    let imageUrl = '';
+    const { name, batch, position, school } = req.body;
+    let imageUrl = "";
 
     if (req.file && req.file.path) {
       const result = await cloudinary.uploader.upload(req.file.path, {
-        folder: 'players',
+        folder: "players",
       });
       imageUrl = result.secure_url;
     }
@@ -21,6 +21,7 @@ router.post('/register', upload.single('image'), async (req, res) => {
       batch,
       position,
       image: imageUrl,
+      school,
     });
     await player.save();
     res.status(201).json({ success: true, player });
@@ -29,7 +30,7 @@ router.post('/register', upload.single('image'), async (req, res) => {
   }
 });
 
-router.get('/players', async (req, res) => {
+router.get("/players", async (req, res) => {
   try {
     const players = await Player.find().sort({ createdAt: -1 });
     res.status(200).json({ success: true, players });
@@ -39,4 +40,3 @@ router.get('/players', async (req, res) => {
 });
 
 module.exports = router;
-
